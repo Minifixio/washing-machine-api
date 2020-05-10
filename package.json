@@ -1,0 +1,24 @@
+{
+  "name": "washingmachine-manager",
+  "version": "1.0.0",
+  "description": "A module to manage washing-machines in your house",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently -k -n \"Typescript,Node\" -p \"[{name}]\" -c \"blue,green\" \"tsc --watch\" \"nodemon dist/index.js --ignore 'dist/datas/*'\"",
+    "start": "tsc && node dist/index.js"
+  },
+  "author": "Minifixio",
+  "license": "ISC",
+  "dependencies": {
+    "ajv": "^6.12.2",
+    "fs": "0.0.1-security",
+    "ts-transformer-keys": "^0.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^13.13.5",
+    "concurrently": "^5.2.0",
+    "nodemon": "^2.0.3",
+    "typescript": "^3.8.3"
+  }
+}

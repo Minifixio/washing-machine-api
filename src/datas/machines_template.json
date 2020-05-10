@@ -1,0 +1,23 @@
+{
+    "machines": [
+        {
+            "id": 0,
+            "program": {
+                "id": 0,
+                "name": "Dry"
+            },
+            "creator_id": 1,
+            "start_time": 1589142726908,
+            "init_time": 1589142725929,
+            "filling": 20,
+            "message": "quick please"
+        }
+    ],
+
+    "programs": [
+        {
+            "id": 0,
+            "name": "Dry"
+        }
+    ]
+}
