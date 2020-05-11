@@ -1,11 +1,13 @@
 import { Program, ProgramSchema } from "./Program";
+import { Entry, EntrySchema } from "./Entry";
 
 export interface Machine {
-    id?: number;
+    id: number;
     program: Program;
     creator_id: number;
-    start_time: number;
-    init_time?: number;
+    start_date: number;
+    init_date: number;
+    participating: Entry[];
     filling: number;
     message?: string;
 }
@@ -22,18 +24,26 @@ export const MachineSchema = {
         "creator_id": {
             "type": "integer"
         },
-        "init_time": {
+        "init_date": {
             "type": "integer"
         },
-        "start_time": {
+        "start_date": {
             "type": "integer"
+        },
+        "participating": {
+            "type": "array",
+            "items": {
+                EntrySchema
+            }
         },
         "filling": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0,
+            "maxium": 100
         },
         "message": {
             "type": "string"
         }
     },
-    "required": [ "id", "program", "creator_id", "init_time", "start_time", "filling" ]
+    "required": [ "id", "program", "creator_id", "init_date", "start_date", "filling" ]
 }

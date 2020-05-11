@@ -120,11 +120,14 @@ export class WashingMachine {
 
                 console.log('machines are well indented')
 
+                machines = this.removeFinishedMachines(machines)
                 let incremented = this.checkIncrement<Machine[]>(machines)
 
                 if (incremented.length > 0) {
-                    this.updateMachines(incremented)
+                    machines = incremented
                 }
+
+                this.updateMachines(incremented)
             }
         }
 
@@ -156,6 +159,42 @@ export class WashingMachine {
                 }
             }
         }
+    }
+
+    /**
+     * Check if the items in the datas files are correctly incremented (ascending order)
+     * @param datas an array of Machines or Programs
+     */
+    private checkIncrement<T extends Machine[] | Program[] | User[]>(datas: T): T | []{
+        var changed = false
+
+        for(let i=0; i<datas.length; i++) {
+            if (datas[i].id != i) {
+                changed = true
+                datas[i].id = i
+            }
+        }
+
+        if (changed) {
+            console.log('changed incrementation')
+            return datas
+        } else {
+            return []
+        }
+    }
+
+    /**
+     * returns an array of machine without the machines already finished
+     * @param machines the current array of machines
+     * @returns {Machine[]} a new array of machine without the old finished machines
+     */
+    private removeFinishedMachines(machines: Machine[]): Machine[] {
+        let today = Date.now()
+
+        machines.forEach((machine: Machine, index: number) => {
+            if (machine.start_date < today) { machines.splice(index, 1) }
+        })
+        return machines
     }
 
     /**
@@ -201,32 +240,18 @@ export class WashingMachine {
     }
 
     /**
-     * Check if the items in the datas files are correctly incremented (ascending order)
-     * @param datas an array of Machines or Programs
+     * Add a new machine to the machines file
+     * @param program_id 
+     * @param creator_id 
+     * @param start_date must be epoch format
+     * @param filling must be in percentage where 0 means the machine is empty and 100 full
+     * @param message optional
      */
-    private checkIncrement<T extends Machine[] | Program[] | User[]>(datas: T): T | []{
-
-        var changed = false
-
-        for(let i=0; i<datas.length; i++) {
-            if (datas[i].id != i) {
-                changed = true
-                datas[i].id = i
-            }
-        }
-
-        if (changed) {
-            console.log('changed incrementation')
-            return datas
-        } else {
-            return []
-        }
-    }
-
-    addMachine(program_id: number, creator_id: number, start_time: number, filling = 0, message = '') {
+    addMachine(program_id: number, creator_id: number, start_date: number, filling = 0, message = ''): boolean {
 
         let machines = this.getMachines()
         let program = this.getProgramByID(program_id)
+        let initDate = Date.now()
         
         if (!program) {
             console.error('wrong program assigned to the machine')
@@ -238,28 +263,38 @@ export class WashingMachine {
             return false
         }
 
+        if (start_date < initDate) {
+            console.warn('the machine start date is in the past !')
+        }
+
+        if (filling > 100) {
+            console.error('filling must be in percentage between 0 and 100')
+            return false
+        }
+
         let machine: Machine = {
             id: machines.length,
             program,
             creator_id,
-            start_time,
-            init_time: Date.now(),
+            start_date,
+            init_date: initDate,
+            participating: [],
             filling,
             message
         }
 
         machines.push(machine)
-
         this.updateMachines(machines)
 
         console.log('a new machine was added')
+        return true
     }
 
     /**
      * Add a new user to the users file
      * @param name the name of the user
      */
-    addUser(name: string) {
+    addUser(name: string): void {
         
         let users = this.getUsers()
 
@@ -277,8 +312,9 @@ export class WashingMachine {
     /**
      * Add a new program to the machines file
      * @param name the name of the program. The ID is auto incremented
+     * @returns {program_id} the id of the program added
      */
-    addProgram(name: string) {
+    addProgram(name: string): number {
         let programs = this.getPrograms()
 
         let program: Program = {
@@ -288,12 +324,13 @@ export class WashingMachine {
 
         programs.push(program)
         this.updatePrograms(programs)
+        return programs.length - 1
     }
 
     /**
      * Returns the last machine on the list
      */
-    getCurrentMachine() {
+    getCurrentMachine(): Machine | null {
         let machines = this.getMachines()
 
         if (machines.length > 0) {
@@ -308,7 +345,7 @@ export class WashingMachine {
      * @param id the id of the program
      * @returns {(Program|undefined)} a program or undefined if no programs were found
      */
-    getProgramByID(id: number): Program|undefined {
+    getProgramByID(id: number): Program | undefined {
         let programs = this.getPrograms()
 
         let res = programs.find(program => program.id === id)
@@ -327,13 +364,79 @@ export class WashingMachine {
      */
     getUserByID(id: number): User | undefined {
         let users = this.getUsers()
-
-        let res = users.find(user => user.id = id)
+        let res = users.find(user => user.id === id)
 
         if (res) {
             return res
         } else {
             return undefined
         }
+    }
+
+    machineTimeLeft(id: number = 0): number | undefined {
+        let machines = this.getMachines()
+        let machine = machines[id]
+
+        if (!machine) {
+            console.error('no machine with the id', id)
+            return undefined
+        }
+
+        return machine.start_date - Date.now()
+    }
+
+    entry(user_id: number, machine_id: number = 0, filling: number): boolean {
+        let user = this.getUserByID(user_id)
+        let machines = this.getMachines()
+        let machine =  machines[machine_id]
+
+        if (!user) {
+            console.error('the user ' + user_id + ' doesn\'t exist')
+            return false
+        }
+
+        if (machines.length === 0) {
+            console.error('no machine started at the moment')
+            return false
+        }
+
+        if (!machine) {
+            console.error('no machine with the ID', machine_id)
+        }
+
+        let exsitingEntryIndex = machine.participating.findIndex(el => el.user)
+
+        if (exsitingEntryIndex != -1) {
+            let totalFilling = machine.participating[exsitingEntryIndex].filling + filling;
+            totalFilling > 100 ? machine.participating[exsitingEntryIndex].filling = 100: machine.participating[exsitingEntryIndex].filling += filling   
+        } else {
+            let entry: Entry = { user, filling }
+            machine.participating.push(entry)
+        }
+
+        this.updateMachines(machines)
+        return true
+    }
+
+    /**
+     * deletes all the machines
+     */
+    resetMachines(): void {
+        this.updateMachines([])
+    }
+
+    /**
+     * deletes all the users
+     */
+    resetUsers(): void {
+        this.updateUsers([])
+    }
+
+    /**
+     * deletes all the programs
+     * warn : you must at least reference one program
+     */
+    resetPrograms(): void {
+        this.updatePrograms([])
     }
 }
