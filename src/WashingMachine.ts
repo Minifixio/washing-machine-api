@@ -1,11 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import Ajv from 'ajv';
+
 import { User, UserSchema } from "./models/User";
 import { Machine, MachineSchema } from './models/Machine';
 import { Entry } from './models/Entry';
 import { Program, ProgramSchema } from './models/Program';
 import { Errors } from './models/Errors';
+
 var ajv = new Ajv();
 
 export class WashingMachine {
@@ -13,6 +15,8 @@ export class WashingMachine {
     public files_path: string
     private machines_path: string
     private users_path: string 
+
+    private static instance: WashingMachine
 
     constructor (files_path: string = __dirname) {
 
@@ -29,17 +33,28 @@ export class WashingMachine {
         this.machines_path = `${this.files_path}/machines.json`
 
         this.initFiles()
+
+        WashingMachine.instance = this
     }
 
-    getUsers(): User[] {
+    public static getInstance(): WashingMachine {
+        if (!WashingMachine.instance) {
+            console.error('please init your washing machine before any other controller')
+            throw Error(Errors.instance_not_initialized)
+        }
+
+        return WashingMachine.instance
+    }
+
+    public getUsers(): User[] {
         return JSON.parse(fs.readFileSync(this.users_path, 'utf8')).users
     }
 
-    getMachines(): Machine[] {
+    public getMachines(): Machine[] {
         return JSON.parse(fs.readFileSync(this.machines_path, 'utf8')).machines
     }
 
-    getPrograms(): Program[] {
+    public getPrograms(): Program[] {
         return JSON.parse(fs.readFileSync(this.machines_path, 'utf8')).programs
     }
 
@@ -51,7 +66,7 @@ export class WashingMachine {
         // Creating the files if they don't exist
         if (!fs.existsSync(`${this.files_path}/users.json`)) {
             try {
-                fs.writeFileSync(`${this.files_path}/users.json`, JSON.stringify({}))
+                fs.writeFileSync(`${this.files_path}/users.json`, JSON.stringify({ users: [] }))
             } catch(e) {
                 throw Error(e)
             }
@@ -60,7 +75,7 @@ export class WashingMachine {
         // Creating the files if they don't exist
         if (!fs.existsSync(`${this.files_path}/machines.json`)) {
             try {
-                fs.writeFileSync(`${this.files_path}/machines.json`, JSON.stringify({}))
+                fs.writeFileSync(`${this.files_path}/machines.json`, JSON.stringify({ machines: [], programs: [] }))
             } catch(e) {
                 throw Error(e)
             }
@@ -247,7 +262,7 @@ export class WashingMachine {
      * @param filling must be in percentage where 0 means the machine is empty and 100 full
      * @param message optional
      */
-    addMachine(program_id: number, creator_id: number, start_date: number, filling = 0, message = ''): boolean {
+    public addMachine(program_id: number, creator_id: number, start_date: number, filling = 0, message = ''): boolean {
 
         let machines = this.getMachines()
         let program = this.getProgramByID(program_id)
@@ -294,7 +309,7 @@ export class WashingMachine {
      * Add a new user to the users file
      * @param name the name of the user
      */
-    addUser(name: string): void {
+    public addUser(name: string): number {
         
         let users = this.getUsers()
 
@@ -307,6 +322,7 @@ export class WashingMachine {
         this.updateUsers(users)
 
         console.log('a new user was added')
+        return users.length - 1
     }
 
     /**
@@ -314,7 +330,7 @@ export class WashingMachine {
      * @param name the name of the program. The ID is auto incremented
      * @returns {program_id} the id of the program added
      */
-    addProgram(name: string): number {
+    public addProgram(name: string): number {
         let programs = this.getPrograms()
 
         let program: Program = {
@@ -330,7 +346,7 @@ export class WashingMachine {
     /**
      * Returns the last machine on the list
      */
-    getCurrentMachine(): Machine | null {
+    public getCurrentMachine(): Machine | null {
         let machines = this.getMachines()
 
         if (machines.length > 0) {
@@ -345,7 +361,7 @@ export class WashingMachine {
      * @param id the id of the program
      * @returns {(Program|undefined)} a program or undefined if no programs were found
      */
-    getProgramByID(id: number): Program | undefined {
+    public getProgramByID(id: number): Program | undefined {
         let programs = this.getPrograms()
 
         let res = programs.find(program => program.id === id)
@@ -362,7 +378,7 @@ export class WashingMachine {
      * @param id the ID of the user
      * @returns {(User | undefined)} returns undefined if the user doesn't exist
      */
-    getUserByID(id: number): User | undefined {
+    public getUserByID(id: number): User | undefined {
         let users = this.getUsers()
         let res = users.find(user => user.id === id)
 
@@ -373,7 +389,7 @@ export class WashingMachine {
         }
     }
 
-    machineTimeLeft(id: number = 0): number | undefined {
+    public machineTimeLeft(id: number = 0): number | undefined {
         let machines = this.getMachines()
         let machine = machines[id]
 
@@ -385,7 +401,7 @@ export class WashingMachine {
         return machine.start_date - Date.now()
     }
 
-    entry(user_id: number, machine_id: number = 0, filling: number): boolean {
+    public entry(user_id: number, filling: number, machine_id: number = 0): boolean {
         let user = this.getUserByID(user_id)
         let machines = this.getMachines()
         let machine =  machines[machine_id]
@@ -421,14 +437,14 @@ export class WashingMachine {
     /**
      * deletes all the machines
      */
-    resetMachines(): void {
+    public resetMachines(): void {
         this.updateMachines([])
     }
 
     /**
      * deletes all the users
      */
-    resetUsers(): void {
+    public resetUsers(): void {
         this.updateUsers([])
     }
 
@@ -436,7 +452,7 @@ export class WashingMachine {
      * deletes all the programs
      * warn : you must at least reference one program
      */
-    resetPrograms(): void {
+    public resetPrograms(): void {
         this.updatePrograms([])
     }
 }
