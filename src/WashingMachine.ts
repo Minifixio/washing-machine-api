@@ -47,14 +47,17 @@ export class WashingMachine {
     }
 
     public getUsers(): User[] {
+        this.removeFinishedMachines()
         return JSON.parse(fs.readFileSync(this.users_path, 'utf8')).users
     }
 
     public getMachines(): Machine[] {
+        this.removeFinishedMachines()
         return JSON.parse(fs.readFileSync(this.machines_path, 'utf8')).machines
     }
 
     public getPrograms(): Program[] {
+        this.removeFinishedMachines()
         return JSON.parse(fs.readFileSync(this.machines_path, 'utf8')).programs
     }
 
@@ -135,7 +138,6 @@ export class WashingMachine {
 
                 console.log('machines are well indented')
 
-                machines = this.removeFinishedMachines(machines)
                 let incremented = this.checkIncrement<Machine[]>(machines)
 
                 if (incremented.length > 0) {
@@ -143,6 +145,7 @@ export class WashingMachine {
                 }
 
                 this.updateMachines(incremented)
+                this.removeFinishedMachines()
             }
         }
 
@@ -200,16 +203,27 @@ export class WashingMachine {
 
     /**
      * returns an array of machine without the machines already finished
-     * @param machines the current array of machines
      * @returns {Machine[]} a new array of machine without the old finished machines
      */
-    private removeFinishedMachines(machines: Machine[]): Machine[] {
+    private removeFinishedMachines(): Machine[] {
         let today = Date.now()
+        let fileData = JSON.parse(fs.readFileSync(this.machines_path, 'utf8'))
+        let newMachines: Machine[] = fileData.machines.slice()
 
-        machines.forEach((machine: Machine, index: number) => {
-            if (machine.start_date < today) { machines.splice(index, 1) }
+        newMachines.forEach((machine: Machine, index: number) => {
+            if (machine.start_date < today) { newMachines.splice(index, 1); console.log('machine n° ' + machine.id + ' is too old, removing it') }
         })
-        return machines
+
+        try {
+            if (newMachines.length < fileData.machines.length) {
+                fileData.machines = newMachines
+                fs.writeFileSync(this.machines_path, JSON.stringify(fileData, null, 4)) 
+            }
+        } catch(e) {
+            throw e
+        }
+  
+        return newMachines
     }
 
     /**
@@ -218,9 +232,9 @@ export class WashingMachine {
      */
     private updateMachines(data: Machine[]) {
         try {
-            let file_data = JSON.parse(fs.readFileSync(this.machines_path, 'utf8'))
-            file_data.machines = data
-            fs.writeFileSync(this.machines_path, JSON.stringify(file_data, null, 4))   
+            let fileData = JSON.parse(fs.readFileSync(this.machines_path, 'utf8'))
+            fileData.machines = data
+            fs.writeFileSync(this.machines_path, JSON.stringify(fileData, null, 4))   
         } catch(e) {
             throw e
         }
@@ -232,9 +246,9 @@ export class WashingMachine {
      */
     private updatePrograms(data: Program[]) {
         try {
-            let file_data = JSON.parse(fs.readFileSync(this.machines_path, 'utf8'))
-            file_data.programs = data
-            fs.writeFileSync(this.machines_path, JSON.stringify(file_data, null, 4))   
+            let fileData = JSON.parse(fs.readFileSync(this.machines_path, 'utf8'))
+            fileData.programs = data
+            fs.writeFileSync(this.machines_path, JSON.stringify(fileData, null, 4))   
         } catch(e) {
             throw e
         }
@@ -246,9 +260,9 @@ export class WashingMachine {
      */
     private updateUsers(data: User[]) {
         try {
-            let file_data = JSON.parse(fs.readFileSync(this.users_path, 'utf8'))
-            file_data.users = data
-            fs.writeFileSync(this.users_path, JSON.stringify(file_data, null, 4))   
+            let fileData = JSON.parse(fs.readFileSync(this.users_path, 'utf8'))
+            fileData.users = data
+            fs.writeFileSync(this.users_path, JSON.stringify(fileData, null, 4))   
         } catch(e) {
             throw e
         }
