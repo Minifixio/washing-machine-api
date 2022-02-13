@@ -11,7 +11,7 @@
   "author": "Minifixio",
   "license": "ISC",
   "dependencies": {
-    "ajv": "^6.12.2",
+    "ajv": "^6.12.3",
     "express": "^4.17.1",
     "fs": "0.0.1-security",
     "ts-transformer-keys": "^0.4.1"
